@@ -1,7 +1,9 @@
 """Optional MQTT output.
 
-EXPERIMENTAL. Importing this module does not make MQTT mandatory; if enabled
-without paho-mqtt installed, startup fails with a useful message instead.
+EXPERIMENTAL. MQTT is an optional edge output, not a dependency of the local
+receiver. The weather station still gets recorded if the broker is absent.
+
+Author: TABARC-Code
 """
 
 from __future__ import annotations
@@ -25,7 +27,7 @@ class MQTTPublisher:
 
         try:
             import paho.mqtt.client as mqtt
-        except ImportError as exc:  # pragma: no cover - environment-specific
+        except ImportError as exc:
             raise RuntimeError(
                 "MQTT is enabled but paho-mqtt is not installed. "
                 "Run: pip install -r requirements-optional.txt"
@@ -38,15 +40,27 @@ class MQTTPublisher:
         self._client.loop_start()
         LOG.info("MQTT enabled: %s:%s", config.host, config.port)
 
-    def publish(self, observation: ParsedObservation) -> None:
+    def publish(
+        self,
+        observation: ParsedObservation,
+        *,
+        best_estimate: dict[str, object] | None = None,
+        crosscheck: dict[str, object] | None = None,
+        quality: dict[str, object] | None = None,
+        calibration: dict[str, object] | None = None,
+    ) -> None:
         if self._client is None:
             return
+
         topic = f"{self.config.topic_prefix}/{observation.station_id}/state"
         payload = {
             "station_id": observation.station_id,
             "received_at": observation.received_at,
             "protocol": observation.protocol,
-            **observation.normalised,
+            **(best_estimate or observation.normalised),
+            "crosscheck": crosscheck or {},
+            "quality": quality or {},
+            "calibration": calibration or {},
         }
         info = self._client.publish(
             topic,
