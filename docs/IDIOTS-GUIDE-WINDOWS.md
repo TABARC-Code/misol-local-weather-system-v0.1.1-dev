@@ -42,9 +42,9 @@ C:\Users\Matt\Documents\misol-local
 
 A folder inside `Downloads` is also fine. Running directly from the ZIP is not.
 
----
+***
 
-# Part 1 — install Python
+# Part 1 - install Python
 
 ## Step 1
 
@@ -74,9 +74,9 @@ When the Python installer finishes, close it.
 
 You do not need to open Python itself.
 
----
+***
 
-# Part 2 — start MISOL Local
+# Part 2 - start MISOL Local
 
 ## Step 4
 
@@ -112,9 +112,9 @@ You should see **MISOL Local**.
 
 It may say there are no readings yet. That is expected.
 
----
+***
 
-# Part 3 — prove the receiver works
+# Part 3 - prove the receiver works
 
 Before changing the weather console, test the PC side.
 
@@ -144,9 +144,9 @@ DIAGNOSE-WINDOWS.bat
 
 Do not start changing router settings yet. First establish which half is actually broken.
 
----
+***
 
-# Part 4 — find the PC's address
+# Part 4 - find the PC's address
 
 The weather console needs the Windows PC's LAN address.
 
@@ -186,9 +186,9 @@ in the weather console.
 
 `127.0.0.1` works in the browser on the PC because it means “this computer”. On the weather console it would mean “the weather console”, which is not where MISOL Local lives.
 
----
+***
 
-# Part 5 — configure the weather console
+# Part 5 - configure the weather console
 
 The exact screen varies by app and firmware, but you are looking for **Upload**, **Weather Services**, **Customised Website** or similar.
 
@@ -232,9 +232,9 @@ http://127.0.0.1:8080/
 
 If the real weather data appears, the basic installation is finished.
 
----
+***
 
-# Part 6 — what to do next time
+# Part 6 - what to do next time
 
 You do not need to run the setup again every day.
 
@@ -252,9 +252,9 @@ Ctrl+C
 
 Then close the window if it remains open.
 
----
+***
 
-# Part 7 — where the data is stored
+# Part 7 - where the data is stored
 
 Your database file is:
 
@@ -276,9 +276,9 @@ http://127.0.0.1:8080/export.csv?limit=1000
 
 Your browser will show or save CSV data depending on its settings.
 
----
+***
 
-# Part 8 — if the real weather station does not appear
+# Part 8 - if the real weather station does not appear
 
 Work through these in order.
 
@@ -378,9 +378,9 @@ If you report an issue, include:
 
 Do not post real PASSKEYs, passwords or cloud credentials.
 
----
+***
 
-# Part 9 — optional MQTT
+# Part 9 - optional MQTT
 
 Ignore this entire section until ordinary receiving works.
 
@@ -407,9 +407,9 @@ misol-local/<station-id>/state
 
 If you do not know what an MQTT broker is, leave `enabled = no`. Nothing is missing from the basic local logger.
 
----
+***
 
-# Part 10 — uninstalling it
+# Part 10 - uninstalling it
 
 MISOL Local does not install a Windows service or scatter files around the operating system.
 
@@ -422,3 +422,50 @@ To remove it:
 That is it.
 
 The Python installation can remain because other Python programs may use it. Remove Python separately through Windows **Installed apps** only if you know you no longer need it.
+
+
+## Optional: compare your station with outside weather sources
+
+Do this only after ordinary local reception works. There is no prize for debugging the weather console, Windows Firewall and three internet services simultaneously.
+
+Open `config.ini` in Notepad. Find the `[crosscheck]` section and enter the latitude and longitude for the weather station. Set `enabled = yes`.
+
+For a no-key comparison, enable `[openmeteo]`. This provides model-based current weather conditions. You can also enable `[satellite]` for satellite-derived solar radiation.
+
+OpenWeather is optional and requires an OpenWeather API key. If you already have one, put it under `[openweather]` and set that provider to `enabled = yes`. Do not paste API keys into screenshots, issues or chat logs.
+
+Leave `fusion_mode = fill_gaps` when starting. That mode preserves every local MISOL value and only uses an external source when the local station omitted a field. `compare_only` is even more cautious. `guarded` can change the derived best estimate when two external sources agree and the local reading disagrees, so use that only after you understand what the comparison page is showing.
+
+Restart MISOL Local and open:
+
+`http://127.0.0.1:8080/api/crosscheck`
+
+You should see each enabled provider, its latest reading, any error and a small health record. A provider failure does not stop local weather collection.
+
+## Optional: let it learn sensor bias
+
+Calibration learning is enabled by default but automatic correction is not. That is deliberate.
+
+Open:
+
+`http://127.0.0.1:8080/api/calibration`
+
+At first the sample counts will be small or zero. Leave the station running. A calibration sample is recorded only when at least two external references agree closely enough to make a useful comparison.
+
+After enough history exists, a field may show `stable: true` and a median bias. Do not immediately switch automatic correction on because one number looks persuasive. Check that the bias remains sensible across different weather conditions.
+
+If you eventually want the learned correction used in the derived best-estimate stream, set:
+
+`apply_to_best_estimate = yes`
+
+Raw MISOL observations are still kept unchanged.
+
+## Optional: reject physically impossible values from the derived stream
+
+The quality checker normally records a rejection but leaves the value alone. This is useful while the thresholds are still being proved against real hardware.
+
+If you want physically impossible values such as 140% humidity excluded from the derived stream, set:
+
+`reject_impossible = yes`
+
+The original packet remains in the database. Only the derived value is withheld, and an enabled external source may fill that gap.
