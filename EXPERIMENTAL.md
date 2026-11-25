@@ -15,3 +15,12 @@ Things not yet proven on the target hardware:
 - whether calibration is applied before upload.
 
 None of those are reasons to make the first version cleverer. They are reasons to capture a real packet before pretending certainty.
+
+
+## Quality and calibration
+
+The quality-control and calibration features are experimental. Their output is advisory until enough real station history exists to judge the thresholds.
+
+Raw observations are preserved. A QC rejection affects only derived processing when `reject_impossible = yes`. Calibration learns only from agreeing external references and does not alter `best_estimate` unless `apply_to_best_estimate = yes` is explicitly enabled.
+
+External weather services are references, not ground truth. Model grids, satellite pixels and a sensor mounted on a house do not observe exactly the same air parcel. Apparent disagreement can be real local weather rather than sensor error.
