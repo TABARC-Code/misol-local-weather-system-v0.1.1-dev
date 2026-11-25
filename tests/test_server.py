@@ -30,6 +30,18 @@ class ServerTests(unittest.TestCase):
         self.app.mqtt.close()
         self.tmp.cleanup()
 
+    def test_reject_impossible_removes_only_derived_bad_value(self):
+        self.app.config.quality.reject_impossible = True
+        result = self.app.ingest(
+            {"PASSKEY": "abc123", "humidity": "140", "tempf": "50"},
+            path="/data/report/",
+            client_ip="192.0.2.44",
+        )
+        self.assertEqual(result["data"]["humidity_out_pct"], 140.0)
+        self.assertNotIn("humidity_out_pct", result["best_estimate"])
+        self.assertEqual(result["best_estimate"]["temperature_out_c"], 10.0)
+        self.assertEqual(result["quality"]["descriptor"], "rejected")
+
     def test_ecowitt_post_then_latest(self):
         body = urlencode({"PASSKEY": "abc123", "tempf": "50", "humidity": "80"}).encode()
         req = Request(
