@@ -1,4 +1,4 @@
-# MISOL Local — repository description
+# MISOL Local - repository description
 
 ## GitHub “About” description
 
@@ -59,3 +59,12 @@ home-lab
 ## Licence
 
 MIT. Research provenance and clean-room notes are documented in `RESEARCH.md`.
+
+
+## Current experimental direction
+
+The current development branch is moving beyond simple packet capture into a local, quality-controlled weather record. MISOL observations remain the primary source. Optional OpenWeather, Open-Meteo model data and satellite solar radiation can be retained alongside them for comparison, gap filling and long-term sensor-drift analysis.
+
+The project does not silently rewrite raw weather history. Quality flags, external references, calibration candidates and derived best-estimate values are separate records with provenance. Automatic calibration is deliberately disabled by default.
+
+This remains a side project rather than a meteorological authority. The aim is to make one consumer weather station more observable, more useful and less dependent on opaque cloud services.
