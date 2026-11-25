@@ -154,7 +154,7 @@ A successful first report should appear as a station card with normalised values
 Useful endpoints are:
 
 | Address | What it does |
-| --- | --- |
+| *** | *** |
 | `/` | small local dashboard |
 | `/health` | service and database health |
 | `/api/latest` | latest observation per station |
@@ -190,7 +190,7 @@ It checks the common local problems: Python, the virtual environment, configurat
 The most common failures are less exotic than people hope:
 
 | Symptom | Likely cause | What to check |
-| --- | --- | --- |
+| *** | *** | *** |
 | `START-HERE-WINDOWS.bat` says Python is missing | Python is not installed or is not on PATH | Install Python 3.11+ and tick **Add python.exe to PATH** |
 | Dashboard opens but stays empty | Console is not reaching the PC | PC IP, port 8080, protocol, path and firewall |
 | Test packet works but real station does not | Receiver is fine, network/configuration is not | Use the PC's LAN IP, not `127.0.0.1`; confirm both devices are on the same LAN |
@@ -476,3 +476,36 @@ Do not include real station passwords, API keys, private IP screenshots containi
 ## Licence
 
 MISOL Local is released under the **MIT Licence**. See [`LICENSE`](LICENSE).
+
+
+## Weather quality, cross-checking and calibration
+
+Version 0.3 adds a deliberately conservative quality and comparison layer. The local MISOL reading remains the primary observation and is always retained unchanged. External data is stored separately, the quality checker attaches flags, and any combined value lives in a separate `best_estimate` view.
+
+The external adapters currently support OpenWeather current conditions, Open-Meteo current model conditions and Open-Meteo satellite-derived solar radiation. Each provider can fail independently. A dead API must not stop a weather station from recording the weather outside the window.
+
+Three fusion modes are available. `compare_only` records disagreements but never fills or changes fields. `fill_gaps` keeps local values and fills missing fields from a fresh external reference. `guarded` allows a derived value to change only when at least two independent external inputs agree closely with each other and both disagree materially with the local value.
+
+Quality checks currently cover broad physical plausibility, rapid temporal changes and a small internal wind consistency check. They produce `pass`, `questioned` or `rejected` metadata. By default even a rejected value remains present in the derived stream because the QC system is experimental. Setting `reject_impossible = yes` removes only physically impossible fields from the derived fusion input. The original station packet and normalised local observation are still preserved.
+
+Historical calibration is slower by design. The learner records a bias sample only when two external providers agree closely enough to form a reference. It then tracks median bias and median absolute deviation over a rolling window. A correction is considered stable only after enough samples have accumulated and the bias itself has stayed reasonably consistent.
+
+Automatic application is disabled by default. Set `apply_to_best_estimate = yes` only after inspecting `/api/calibration` and deciding the learned correction represents sensor bias rather than a systematic difference between a roof sensor and a regional model.
+
+Useful endpoints now include:
+
+* `/api/latest` for the latest raw and derived observations.
+* `/api/crosscheck` for provider readings, errors and provider health.
+* `/api/calibration` for learned bias profiles and sample counts.
+* `/health` for application state, observation count and external-provider health.
+* `/export.csv` for local observation export.
+
+The external layer is optional. Leave `crosscheck.enabled = no` and MISOL Local remains a completely local receiver.
+
+### Why not simply average everything?
+
+Because weather data does not become more accurate merely because three different APIs supplied a number. Model output, satellite retrievals and a sensor in the garden measure related but not identical things, at different spatial scales and sometimes different heights.
+
+The project therefore keeps provenance and uses agreement as evidence rather than voting by spreadsheet. It is slightly more boring than averaging everything. That is intentional.
+
+See `docs/QUALITY-CALIBRATION.md` for the full behaviour and safety notes.
