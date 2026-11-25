@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "misol-local"
-version = "0.1.1.dev0"
-description = "Experimental local receiver for MISOL/Fine Offset-style weather station custom uploads"
+version = "0.3.0.dev0"
+description = "Experimental local receiver, quality checker and conservative weather-data fusion system for MISOL/Fine Offset-style stations"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
