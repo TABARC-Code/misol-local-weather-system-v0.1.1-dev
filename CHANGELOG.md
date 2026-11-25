@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.0-dev
+
+Experimental research and reliability update.
+
+Added Open-Meteo current conditions as a second general reference source alongside OpenWeather and satellite solar radiation. Added provider health state, latency tracking and isolated provider failures.
+
+Added weather quality-control flags for broad plausibility, rapid temporal changes and internal wind consistency. Added an optional derived-stream safety valve for physically impossible values while preserving raw history.
+
+Added historical calibration learning based on agreement between at least two external references. Calibration uses median bias and median absolute deviation, retains provenance, and does not alter the best-estimate stream unless explicitly enabled.
+
+Added calibration storage, API reporting, SQLite migration support, request size limits, response security headers and expanded MQTT metadata.
+
+Replaced the release-triggered PyPI publishing workflow with test-only CI for Windows and Ubuntu across supported Python versions.
+
+Expanded clean-room research notes and tests.
+
+# Changelog
+
 ## 0.1.1-dev
 
 Beginner-facing packaging pass.
