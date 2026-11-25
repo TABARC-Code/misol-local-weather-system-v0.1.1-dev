@@ -94,20 +94,36 @@ class App:
             temporal_window_seconds=self.config.quality.temporal_window_seconds,
         ) if self.config.quality.enabled else None
 
+        rejected_fields: set[str] = set()
+        if quality_result and self.config.quality.reject_impossible:
+            rejected_fields = {
+                field
+                for field, flags in quality_result.flags.items()
+                if "below_plausible_range" in flags or "above_plausible_range" in flags
+            }
+
+        # Raw data stays untouched. Only the derived fusion input drops physically
+        # implausible values when the operator explicitly enables this safety valve.
+        fusion_local = {
+            field: value
+            for field, value in observation.normalised.items()
+            if field not in rejected_fields
+        }
+
         self.external.kick()
         fusion = fuse(
-            observation.normalised,
+            fusion_local,
             self.external.readings().values(),
             mode=self.config.crosscheck.fusion_mode,
             max_age_seconds=self.config.crosscheck.max_age_seconds,
         ) if self.config.crosscheck.enabled else None
 
-        best = dict(fusion.best_estimate if fusion else observation.normalised)
+        best = dict(fusion.best_estimate if fusion else fusion_local)
         crosscheck = fusion.crosscheck if fusion else {}
         calibration_metadata: dict[str, object] = {}
 
         if self.config.calibration.enabled and fusion:
-            samples = consensus_samples(observation.normalised, crosscheck)
+            samples = consensus_samples(fusion_local, crosscheck)
             self.store.add_calibration_samples(
                 observation.station_id,
                 observation.received_at,
