@@ -108,3 +108,18 @@ MIT-licensed project intended to let an Ecowitt gateway publish to more than one
 - `bdavj/ecowittHttpBlaster`: MIT. Behaviour studied; forwarding deferred.
 - `floatAsNeeded/LineaMeteoStazione-Personalised-Weather-Station`: MIT. Hardware/ecosystem context only.
 - several MISOL hobby repositories: no licence visible. Treated as read-only behavioural references.
+
+
+## 2026-11 quality and calibration research pass
+
+This pass broadened the research beyond MISOL-specific decoders. The useful ideas came from mature weather software and operational meteorological quality-control systems rather than from another brand-specific parser.
+
+The design pattern retained from that research is layered handling: preserve the observation, attach quality information, compare independent references, and only then create a derived estimate. The implementation is clean-room. No third-party source was transplanted.
+
+Repositories reviewed included WeeWX, ecowitt2mqtt, ecowitt_local, WeatherFlow-to-MQTT projects, rtl_433 and newer Ecowitt MQTT bridges. Licensing was checked before implementation. GPL projects were used only to understand architecture and behaviour. MIT projects were also treated as research references rather than source donors.
+
+A targeted security sanity scan looked for obvious dynamic execution, shell invocation and disabled TLS verification in the shortlisted projects. Expected subprocess and dynamic-expression use exists in some large projects, particularly tooling and examples. Nothing in that targeted scan justified copying code into MISOL Local, and it was not a substitute for a full independent security audit.
+
+The resulting v0.3 work adds a second general external reference through Open-Meteo current model data, provider health reporting, weather-specific QC flags, consensus-gated calibration learning and a physically-impossible-value safety valve. Raw station history remains immutable.
+
+I am deliberately not calling two model providers two independent thermometers. Their agreement is useful evidence, but common upstream observations and model physics can correlate their errors. The calibration system therefore starts conservative and leaves automatic application disabled.
