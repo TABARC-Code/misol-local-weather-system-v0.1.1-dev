@@ -24,6 +24,7 @@ from .fusion import fuse
 from .mqtt import MQTTPublisher
 from .protocol import parse_observation
 from .quality import assess
+from .sensor_health import analyse_station
 from .storage import Store
 
 LOG = logging.getLogger(__name__)
@@ -72,6 +73,17 @@ class App:
                 "apply_to_best_estimate": self.config.calibration.apply_to_best_estimate,
             }
         return {"stations": result}
+
+    def sensor_health_snapshot(self, station_id: str | None = None) -> dict[str, object]:
+        stations = [station_id] if station_id else [str(row["station_id"]) for row in self.store.latest()]
+        reports = {}
+        for station in stations:
+            reports[station] = analyse_station(
+                station,
+                self.store.recent_for_station(station, 240),
+                calibration_profiles=self._profiles(station),
+            )
+        return {"stations": reports}
 
     def ingest(self, data: dict[str, str], *, path: str, client_ip: str) -> dict[str, object]:
         observation = parse_observation(
@@ -174,7 +186,7 @@ class App:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "MISOLLocal/0.3-experimental"
+    server_version = "MISOLLocal/0.5-experimental"
 
     @property
     def app(self) -> App:
@@ -283,6 +295,12 @@ class Handler(BaseHTTPRequestHandler):
             self._json(self.app.calibration_snapshot(station))
             return
 
+        if path == "/api/sensor-health":
+            query = parse_qs(parsed.query)
+            station = query.get("station", [None])[0]
+            self._json(self.app.sensor_health_snapshot(station))
+            return
+
         if path == "/api/recent":
             query = parse_qs(parsed.query)
             try:
@@ -329,6 +347,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _dashboard(self) -> None:
         latest = self.app.store.latest()
+        health = self.app.sensor_health_snapshot().get("stations", {})
         cards: list[str] = []
         for row in latest:
             values = row.get("best_estimate") or row.get("data", {})
@@ -338,12 +357,24 @@ class Handler(BaseHTTPRequestHandler):
                 f"<tr><th>{escape(str(k))}</th><td>{escape(str(v))}</td></tr>"
                 for k, v in sorted(values.items())
             )
+            report = health.get(str(row["station_id"]), {}) if isinstance(health, dict) else {}
+            sensor_rows = ""
+            if isinstance(report, dict):
+                sensor_map = report.get("sensors", {})
+                if isinstance(sensor_map, dict):
+                    sensor_rows = "".join(
+                        f"<tr><th>{escape(str(name))}</th><td>{escape(str(item.get('score', '?')))} / 100</td><td>{escape(str(item.get('verdict', 'unknown')))}</td></tr>"
+                        for name, item in sensor_map.items() if isinstance(item, dict)
+                    )
             cards.append(
                 f"""
                 <section>
                   <h2>{escape(str(row['station_id']))}</h2>
                   <p>{escape(str(row['received_at']))} | {escape(str(row['protocol']))} | QC: {escape(str(quality_text))}</p>
-                  <table>{lines or '<tr><td>No normalised fields yet.</td></tr>'}</table>
+                  <p><strong>Sensor health:</strong> {escape(str(report.get('overall_score', '?')))} / 100 |
+                     {escape(str(report.get('classification', 'unknown')))}</p>
+                  <table>{sensor_rows or '<tr><td>Sensor health needs more observations.</td></tr>'}</table>
+                  <details><summary>Latest weather values</summary><table>{lines or '<tr><td>No normalised fields yet.</td></tr>'}</table></details>
                 </section>
                 """
             )
@@ -369,7 +400,7 @@ code {{ background:#222; padding:.1rem .25rem; }}
 <body>
 <header><h1>MISOL Local</h1><p class="badge">EXPERIMENTAL</p>
 <p>Local weather-console receiver with conservative cross-checking and calibration.</p></header>
-<p><a href="/api/latest">latest JSON</a> | <a href="/api/recent">recent JSON</a> | <a href="/api/crosscheck">cross-check</a> | <a href="/api/calibration">calibration</a> | <a href="/export.csv">CSV</a> | <a href="/health">health</a></p>
+<p><a href="/api/latest">latest JSON</a> | <a href="/api/recent">recent JSON</a> | <a href="/api/crosscheck">cross-check</a> | <a href="/api/calibration">calibration</a> | <a href="/api/sensor-health">sensor health</a> | <a href="/export.csv">CSV</a> | <a href="/health">health</a></p>
 {''.join(cards) if cards else '<section><h2>No readings yet</h2><p>Point the console custom server at <code>/data/report/</code> on this machine.</p></section>'}
 </body></html>"""
         self._send(200, body.encode("utf-8"), "text/html; charset=utf-8")

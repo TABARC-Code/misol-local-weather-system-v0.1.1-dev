@@ -513,3 +513,14 @@ See `docs/QUALITY-CALIBRATION.md` for the full behaviour and safety notes.
 ## Historical calibration
 
 The calibration report now uses completed UTC days from the preceding 60 days, each with at least six hourly groups. I compare the latest seven qualifying days against the older baseline to flag drift. Leave automatic correction off unless you have checked the instrument against a physical reference. Regional models can share inputs; agreement is not proof of independence. Only small temperature and sea-level pressure offsets are eligible for optional correction. Raw readings are never changed.
+
+
+## Sensor health dashboard
+
+Version 0.5 adds an explainable sensor-health view to the existing dashboard. I am deliberately not using a black-box classifier here. The report combines recent completeness, physical-limit flags, persistence, external disagreement, corroborated rapid changes and the longer calibration history.
+
+The result separates three useful states: ordinary weather, a probable weather event, and probable sensor deterioration. An uncertain result stays uncertain rather than being promoted into a confident diagnosis because the dashboard wanted a prettier badge.
+
+Each physical sensor receives its own 0 to 100 diagnostic score with evidence and maintenance notes. The score is not a calibration certificate. A rain gauge can be told to inspect its funnel and tipping mechanism, an anemometer can be flagged for a suspicious flat trace against moving external wind, and a humidity channel can carry a long-term drift warning without any of those flags rewriting the raw history.
+
+Use `/api/sensor-health` for all stations or `/api/sensor-health?station=STATION_ID` for one station. The HTML front page now includes the same summary beside the live weather values.

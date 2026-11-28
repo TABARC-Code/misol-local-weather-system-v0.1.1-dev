@@ -172,6 +172,14 @@ class Store:
             rows = conn.execute("SELECT * FROM observations ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [self._row(row) for row in rows]
 
+    def recent_for_station(self, station_id: str, limit: int = 100) -> list[dict[str, object]]:
+        with closing(self._connect()) as conn, conn:
+            rows = conn.execute(
+                "SELECT * FROM observations WHERE station_id = ? ORDER BY id DESC LIMIT ?",
+                (station_id, limit),
+            ).fetchall()
+        return [self._row(row) for row in rows]
+
     def latest_for_station(self, station_id: str) -> dict[str, object] | None:
         with closing(self._connect()) as conn, conn:
             row = conn.execute("SELECT * FROM observations WHERE station_id = ? ORDER BY id DESC LIMIT 1", (station_id,)).fetchone()

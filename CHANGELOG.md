@@ -49,3 +49,12 @@ Initial experimental clean-room build.
 ## 0.4.0-dev
 
 Historical daily calibration, drift reporting, bounded optional corrections, fresh-reference checks, circular wind direction averaging and credential redaction improvements.
+
+
+## 0.5.0-dev
+
+Added an explainable sensor-health dashboard and JSON API.
+
+Each sensor now receives a diagnostic health score with evidence and maintenance hints. The classifier distinguishes probable weather events from probable sensor deterioration using persistence, missing data, physical-limit flags, external-reference disagreement, corroborated rapid changes and historical drift.
+
+Added station-specific recent-history queries and kept all diagnosis outside the immutable raw observation path.

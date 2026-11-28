@@ -127,3 +127,14 @@ I am deliberately not calling two model providers two independent thermometers. 
 ## Historical quality references
 
 I used the published descriptions of [PWSQC](https://github.com/LottedeVos/PWSQC), [CrowdQC+](https://github.com/dafenner/CrowdQCplus), [Fenland](https://github.com/digitalurban/fenland) and the [2024 rainfall QC comparison](https://doi.org/10.5194/hess-28-4715-2024) as behavioural references. No implementation from these projects is incorporated in the historical estimator. Daily grouping, robust medians and drift reporting are local implementations. A regional reference remains a comparison, not instrument calibration.
+
+
+## Sensor-health research pass
+
+The sensor-health layer follows established automatic weather-station quality-control families rather than copying another dashboard. The useful recurring checks are physical range, rate of change, persistence, internal consistency, spatial or reference comparison and maintenance metadata.
+
+I also reviewed recent work on long-term compact weather-station degradation. The practical lesson is annoyingly physical: humidity elements drift, rain mechanisms foul or seize, and exposed wind hardware wears. Software can detect evidence of those failures, but it cannot clean a funnel or replace a bearing.
+
+Public projects including SIH26073-Weather and SKYGUARD AI were reviewed for behavioural ideas around separating correlated weather events from isolated sensor anomalies. Their code is not incorporated here. MISOL Local keeps a smaller deterministic implementation built around its own stored observations, quality flags and external-reference metadata.
+
+Primary background references include WMO quality-control guidance, published mesonet quality-assurance procedures, EUMETNET personal-weather-station QC experience, and Brown et al. (2026), "Performance and longevity of compact all-in-one weather stations". Suspect readings remain visible for human investigation rather than being silently deleted.
