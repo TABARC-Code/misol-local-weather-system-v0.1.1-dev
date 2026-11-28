@@ -168,6 +168,18 @@ def analyse_station(
 
     for sensor, fields in SENSORS.items():
         health = SensorHealth(sensor=sensor)
+        ever_seen = any(
+            isinstance(row.get("data"), dict)
+            and any(_number(row["data"].get(field)) is not None for field in fields)
+            for row in rows
+        )
+        if not ever_seen:
+            health.state = "not_observed"
+            health.verdict = "not_observed"
+            health.evidence.append("This station has not supplied a field belonging to this sensor group.")
+            sensors[sensor] = health
+            continue
+
         present = sum(1 for row in rows[-20:] if isinstance(row.get("data"), dict)
                       and any(_number(row["data"].get(field)) is not None for field in fields))
         expected = min(20, len(rows))
@@ -232,7 +244,7 @@ def analyse_station(
         if sensor == "hygrometer" and any("Historical drift" in item for item in health.evidence):
             health.maintenance.append("Humidity elements can age. Treat persistent drift as a maintenance clue, not an automatic correction.")
 
-        if health.score < 50:
+        if health.score <= 50:
             health.state = "maintenance_required"
             health.verdict = "probable_sensor_problem"
         elif health.score < 75:
@@ -246,7 +258,7 @@ def analyse_station(
     if _storm_signature(rows):
         event_votes += 2
 
-    scores = [item.score for item in sensors.values()]
+    scores = [item.score for item in sensors.values() if item.state != "not_observed"]
     overall = round(median(scores)) if scores else 0
     classification = "normal"
     if event_votes > fault_votes and event_votes:
