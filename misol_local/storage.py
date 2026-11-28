@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 import sqlite3
 from threading import Lock
+from statistics import median
 from typing import Iterable
 
 from .calibration import CalibrationSample
@@ -118,6 +119,27 @@ class Store:
                 (station_id, field, limit),
             ).fetchall()
         return [float(row["bias"]) for row in rows]
+
+    def daily_calibration_biases(self, station_id: str, field: str, days: int = 60) -> list[float]:
+        # One median per UTC hour, then one per day. Old evidence expires.
+        with closing(self._connect()) as conn, conn:
+            rows = conn.execute(
+                """SELECT substr(observed_at, 1, 13) AS hour, bias
+                   FROM calibration_samples
+                   WHERE station_id = ? AND field = ?
+                   AND julianday(observed_at) >= julianday('now', ?)
+                   AND julianday(observed_at) <= julianday('now')
+                   AND substr(observed_at, 1, 10) < date('now')
+                   ORDER BY observed_at""",
+                (station_id, field, f"-{max(1, min(days, 365))} days"),
+            ).fetchall()
+        hours = {}
+        for row in rows:
+            hours.setdefault(row["hour"], []).append(float(row["bias"]))
+        daily = {}
+        for hour, values in hours.items():
+            daily.setdefault(hour[:10], []).append(median(values))
+        return [median(values) for _, values in sorted(daily.items()) if len(values) >= 6]
 
     def calibration_counts(self, station_id: str) -> dict[str, int]:
         with closing(self._connect()) as conn, conn:

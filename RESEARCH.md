@@ -123,3 +123,7 @@ A targeted security sanity scan looked for obvious dynamic execution, shell invo
 The resulting v0.3 work adds a second general external reference through Open-Meteo current model data, provider health reporting, weather-specific QC flags, consensus-gated calibration learning and a physically-impossible-value safety valve. Raw station history remains immutable.
 
 I am deliberately not calling two model providers two independent thermometers. Their agreement is useful evidence, but common upstream observations and model physics can correlate their errors. The calibration system therefore starts conservative and leaves automatic application disabled.
+
+## Historical quality references
+
+I used the published descriptions of [PWSQC](https://github.com/LottedeVos/PWSQC), [CrowdQC+](https://github.com/dafenner/CrowdQCplus), [Fenland](https://github.com/digitalurban/fenland) and the [2024 rainfall QC comparison](https://doi.org/10.5194/hess-28-4715-2024) as behavioural references. No implementation from these projects is incorporated in the historical estimator. Daily grouping, robust medians and drift reporting are local implementations. A regional reference remains a comparison, not instrument calibration.

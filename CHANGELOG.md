@@ -45,3 +45,7 @@ Initial experimental clean-room build.
 - optional MQTT output
 - Windows helper scripts
 - protocol/storage tests
+
+## 0.4.0-dev
+
+Historical daily calibration, drift reporting, bounded optional corrections, fresh-reference checks, circular wind direction averaging and credential redaction improvements.

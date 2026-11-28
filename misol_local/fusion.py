@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from math import fabs
+from math import fabs, isfinite, atan2, sin, cos, radians, degrees
 from typing import Iterable
 
 from .external import ExternalReading
@@ -40,7 +40,7 @@ def _age_seconds(timestamp: str, now: datetime) -> float | None:
         parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
-        return max(0.0, (now - parsed.astimezone(timezone.utc)).total_seconds())
+        return (now - parsed.astimezone(timezone.utc)).total_seconds()
     except (TypeError, ValueError):
         return None
 
@@ -48,7 +48,7 @@ def _age_seconds(timestamp: str, now: datetime) -> float | None:
 def _numeric(value: object) -> float | None:
     if isinstance(value, bool):
         return None
-    if isinstance(value, (int, float)):
+    if isinstance(value, (int, float)) and isfinite(value):
         return float(value)
     return None
 
@@ -69,9 +69,9 @@ def _fresh(readings: Iterable[ExternalReading], max_age_seconds: int) -> list[Ex
     fresh: list[ExternalReading] = []
     for reading in readings:
         age = _age_seconds(reading.observed_at, now)
-        if age is None or age <= max_age_seconds:
+        if age is not None and -60 <= age <= max_age_seconds:
             fresh.append(reading)
-    return fresh
+    return list({r.provider: r for r in fresh}.values())
 
 
 def fuse(
@@ -155,7 +155,11 @@ def fuse(
                     break
 
             if agreeing_pair:
-                selected = (agreeing_pair[0][1] + agreeing_pair[1][1]) / 2.0
+                a, b = agreeing_pair[0][1], agreeing_pair[1][1]
+                selected = (a + b) / 2.0
+                if field == "wind_direction_deg":
+                    selected = degrees(atan2(sin(radians(a)) + sin(radians(b)),
+                                             cos(radians(a)) + cos(radians(b)))) % 360
                 best[field] = round(selected, 3)
                 field_check["status"] = "corrected_by_external_consensus"
                 field_check["selected_source"] = "+".join(

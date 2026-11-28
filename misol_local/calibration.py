@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from statistics import median
+from math import isfinite
 
 from .fusion import TOLERANCES, _difference
 
@@ -40,6 +41,8 @@ class CalibrationProfile:
     median_bias: float
     mad: float
     stable: bool
+    days: int = 0
+    drift: float | None = None
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -48,6 +51,8 @@ class CalibrationProfile:
             "median_bias": round(self.median_bias, 4),
             "mad": round(self.mad, 4),
             "stable": self.stable,
+            "days": self.days,
+            "drift": self.drift,
         }
 
 
@@ -63,6 +68,8 @@ def consensus_samples(
         check = crosscheck.get(field)
         if not isinstance(local_value, (int, float)) or isinstance(local_value, bool):
             continue
+        if not isfinite(local_value):
+            continue
         if not isinstance(check, dict):
             continue
         providers = check.get("providers")
@@ -72,7 +79,7 @@ def consensus_samples(
         values = [
             (str(name), float(value))
             for name, value in providers.items()
-            if isinstance(value, (int, float)) and not isinstance(value, bool)
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and isfinite(value)
         ]
         if len(values) < 2:
             continue
@@ -136,7 +143,10 @@ def apply_profiles(
             continue
         check = crosscheck.get(field)
         selected_source = check.get("selected_source") if isinstance(check, dict) else "local"
-        can_apply = profile.stable and selected_source in {None, "local"}
+        can_apply = (profile.stable and selected_source in {None, "local"}
+                     and field in best_estimate and isfinite(local_value)
+                     and field in {"temperature_out_c", "pressure_relative_hpa"}
+                     and abs(profile.median_bias) <= TOLERANCES[field] / 2)
         corrected = float(local_value) - profile.median_bias
         metadata[field] = {
             **profile.as_dict(),
@@ -148,3 +158,21 @@ def apply_profiles(
             calibrated[field] = round(corrected, 4)
 
     return calibrated, metadata
+
+
+def historical_profile(field: str, daily_biases: list[float], *, min_days: int = 14,
+                       max_mad_fraction: float = 0.25) -> CalibrationProfile:
+    """Daily medians prevent a busy console from manufacturing confidence.
+
+    The last seven days are compared to the older baseline, not to themselves.
+    A stable site offset is still not proof of instrument error.
+    """
+    clean = [v for v in daily_biases if isfinite(v)]
+    profile = build_profile(field, clean, min_samples=max(14, min_days),
+                            max_mad_fraction=max_mad_fraction)
+    profile.days = len(clean)
+    if len(clean) >= 14:
+        profile.drift = round(median(clean[-7:]) - median(clean[:-7]), 4)
+        if abs(profile.drift) > TOLERANCES.get(field, 1.0) / 2:
+            profile.stable = False
+    return profile

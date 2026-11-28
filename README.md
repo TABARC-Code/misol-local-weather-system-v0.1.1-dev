@@ -509,3 +509,7 @@ Because weather data does not become more accurate merely because three differen
 The project therefore keeps provenance and uses agreement as evidence rather than voting by spreadsheet. It is slightly more boring than averaging everything. That is intentional.
 
 See `docs/QUALITY-CALIBRATION.md` for the full behaviour and safety notes.
+
+## Historical calibration
+
+The calibration report now uses completed UTC days from the preceding 60 days, each with at least six hourly groups. I compare the latest seven qualifying days against the older baseline to flag drift. Leave automatic correction off unless you have checked the instrument against a physical reference. Regional models can share inputs; agreement is not proof of independence. Only small temperature and sea-level pressure offsets are eligible for optional correction. Raw readings are never changed.

@@ -52,7 +52,7 @@ def _timestamp_to_iso(value: object) -> str:
     try:
         return datetime.fromtimestamp(float(value), tz=timezone.utc).isoformat(timespec="seconds")
     except (TypeError, ValueError, OSError):
-        return _utc_now()
+        return ""
 
 
 def _get_json(url: str, timeout: float) -> dict[str, object]:
@@ -180,7 +180,7 @@ def fetch_openmeteo(
 
     return ExternalReading(
         provider="openmeteo",
-        observed_at=str(current.get("time") or _utc_now()),
+        observed_at=str(current.get("time") or ""),
         fetched_at=_utc_now(),
         data=data,
         metadata=metadata,
@@ -288,7 +288,7 @@ class ExternalManager:
                     "latency_ms": elapsed,
                     "consecutive_failures": int(previous.get("consecutive_failures", 0)) + 1,
                 }
-            return None, f"{type(exc).__name__}: {exc}"
+            return None, type(exc).__name__
 
         elapsed = round((time.monotonic() - started) * 1000.0, 1)
         with self._lock:

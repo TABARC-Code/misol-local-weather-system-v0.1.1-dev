@@ -17,7 +17,7 @@ import logging
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .calibration import ELIGIBLE_FIELDS, apply_profiles, build_profile, consensus_samples
+from .calibration import ELIGIBLE_FIELDS, apply_profiles, historical_profile, consensus_samples
 from .config import AppConfig
 from .external import ExternalManager
 from .fusion import fuse
@@ -52,15 +52,11 @@ class App:
         if not self.config.calibration.enabled:
             return profiles
         for field in ELIGIBLE_FIELDS:
-            biases = self.store.calibration_biases(
-                station_id,
-                field,
-                self.config.calibration.window_samples,
-            )
-            profiles[field] = build_profile(
+            biases = self.store.daily_calibration_biases(station_id, field)
+            profiles[field] = historical_profile(
                 field,
                 biases,
-                min_samples=self.config.calibration.min_samples,
+                min_days=self.config.calibration.min_days,
                 max_mad_fraction=self.config.calibration.max_mad_fraction,
             )
         return profiles
@@ -123,7 +119,9 @@ class App:
         calibration_metadata: dict[str, object] = {}
 
         if self.config.calibration.enabled and fusion:
-            samples = consensus_samples(fusion_local, crosscheck)
+            learning_local = {k: v for k, v in fusion_local.items()
+                              if not quality_result or k not in quality_result.flags}
+            samples = consensus_samples(learning_local, crosscheck)
             self.store.add_calibration_samples(
                 observation.station_id,
                 observation.received_at,
@@ -131,7 +129,7 @@ class App:
             )
             profiles = self._profiles(observation.station_id)
             best, calibration_metadata = apply_profiles(
-                observation.normalised,
+                fusion_local,
                 best,
                 crosscheck,
                 profiles,

@@ -74,6 +74,7 @@ class QualityConfig:
 class CalibrationConfig:
     enabled: bool = True
     apply_to_best_estimate: bool = False
+    min_days: int = 14
     min_samples: int = 24
     window_samples: int = 500
     max_mad_fraction: float = 0.25
@@ -126,7 +127,7 @@ def load_config(path: str | Path | None = None) -> AppConfig:
     raw_redact = parser.get("privacy", "redact_keys", fallback=",").split(",")
     extra = {item.strip().lower() for item in raw_redact if item.strip()}
     if extra:
-        cfg.privacy.redact_keys = extra
+        cfg.privacy.redact_keys.update(extra)
 
     cfg.mqtt.enabled = _get_bool(parser, "mqtt", "enabled", cfg.mqtt.enabled)
     cfg.mqtt.host = parser.get("mqtt", "host", fallback=cfg.mqtt.host)
@@ -160,6 +161,7 @@ def load_config(path: str | Path | None = None) -> AppConfig:
 
     cfg.calibration.enabled = _get_bool(parser, "calibration", "enabled", cfg.calibration.enabled)
     cfg.calibration.apply_to_best_estimate = _get_bool(parser, "calibration", "apply_to_best_estimate", cfg.calibration.apply_to_best_estimate)
+    cfg.calibration.min_days = max(14, parser.getint("calibration", "min_days", fallback=14))
     cfg.calibration.min_samples = parser.getint("calibration", "min_samples", fallback=cfg.calibration.min_samples)
     cfg.calibration.window_samples = parser.getint("calibration", "window_samples", fallback=cfg.calibration.window_samples)
     cfg.calibration.max_mad_fraction = parser.getfloat("calibration", "max_mad_fraction", fallback=cfg.calibration.max_mad_fraction)
